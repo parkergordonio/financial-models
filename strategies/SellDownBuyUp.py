@@ -2,26 +2,40 @@ import csv
 
 from PriceAverager import PriceAverager
 from StockPrice import StockPrice
-from InvestStrategy import InvestStrategy
+from InvestUtils import InvestHistory
 
-class SellDownBuyUpStrategy(InvestStrategy):
-    
-    initialPrice = super(SellDownBuyUpStrategy, self).priceList[0].price
-    stockQuantity = 14 # 2500/177
-    bankAccount = 5000 - (stockQuantity * initialPrice)
-    prevPrice = initialPrice
+class SellDownBuyUpStrategy():
+    _history = None
+    initialPrice = None
+    stockQuantity = None
+    bankAccount = None
+    prevPrice = None
 
-    averager = PriceAverager(initialPrice)
+    def __init__(self, history):
+        self._history = history
+        self.initialPrice = self._history.prices()[0].price
+        self.stockQuantity = 14 # 2500/177
+        self.bankAccount = 5000 - (self.stockQuantity * self.initialPrice)
+        self.prevPrice = self.initialPrice
 
-    for p in priceList:
-        if p.price < prevPrice:
-            if bankAccount - p.price > 0.0:
-                stockQuantity = stockQuantity + 1
-                bankAccount = bankAccount - p.price
-            prevPrice = p.price
+    def nextDay(self, p):
+        if p.price < self.prevPrice:
+            self._history.buyStock(p)
+            self.prevPrice = p.price
         else:
-            if stockQuantity > 1:
-                stockQuantity = stockQuantity - 1
-                bankAccount = bankAccount + p.price
-            prevPrice = p.price
-        print "({date}), Worth: (${worth}), Stocks: {stocks} (v={stockValue})".format(stockValue=p.price,date=p.date,stocks=stockQuantity,worth=(float(stockQuantity) * float(p.price) + float(bankAccount)))
+            self._history.sellStock(p)
+            self.prevPrice = p.price
+        self._history.appendStockHistory(p)
+        print self._history.verboseWealth(p)
+
+    def printUpdate(self):
+        print self._history.verboseWealthNow()
+
+    def stockPriceGraphData(self):
+        return self._history.stockPriceGraphData()
+
+    def wealthGraphData(self):
+        return self._history.wealthGraphData()
+
+    def buyStockBulk(self, p, quantity=1):
+        self._history.buyStock(p, quantity)
